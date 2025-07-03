@@ -66,83 +66,13 @@ The app follows a **Clean Architecture** approach with **BLoC** for state manage
     - `CityRepositoryImpl`: Implements `CityRepository` to manage city persistence.
     - `LocationRepositoryImpl`: Implements `LocationRepository` to handle geolocation.
 
-### Folder Structure
-weather_app/
-├── lib/
-│   ├── core/
-│   │   ├── constants/
-│   │   │   └── cities.dart
-│   │   ├── error/
-│   │   │   └── failures.dart
-│   │   └── network/
-│   │       └── network_info.dart
-│   ├── features/
-│   │   ├── weather/
-│   │   │   ├── presentation/
-│   │   │   │   ├── bloc/
-│   │   │   │   │   ├── weather_bloc.dart
-│   │   │   │   │   ├── city_bloc.dart
-│   │   │   │   │   └── location_bloc.dart
-│   │   │   │   ├── screens/
-│   │   │   │   │   ├── home_screen.dart
-│   │   │   │   │   └── city_selection_screen.dart
-│   │   │   │   └── widgets/
-│   │   │   │       ├── weather_card.dart
-│   │   │   │       └── carousel_view.dart
-│   │   │   ├── domain/
-│   │   │   │   ├── entities/
-│   │   │   │   │   ├── weather.dart
-│   │   │   │   │   ├── city.dart
-│   │   │   │   │   └── location.dart
-│   │   │   │   ├── usecases/
-│   │   │   │   │   ├── get_weather_for_city.dart
-│   │   │   │   │   ├── get_weather_for_location.dart
-│   │   │   │   │   ├── manage_cities.dart
-│   │   │   │   │   └── get_current_location.dart
-│   │   │   │   └── repositories/
-│   │   │   │       ├── weather_repository.dart
-│   │   │   │       ├── city_repository.dart
-│   │   │   │       └── location_repository.dart
-│   │   │   └── data/
-│   │   │       ├── models/
-│   │   │       │   ├── weather_model.dart
-│   │   │       │   └── city_model.dart
-│   │   │       ├── datasources/
-│   │   │       │   ├── weather_api_service.dart
-│   │   │       │   ├── city_local_datasource.dart
-│   │   │       │   └── location_datasource.dart
-│   │   │       └── repositories/
-│   │   │           ├── weather_repository_impl.dart
-│   │   │           ├── city_repository_impl.dart
-│   │   │           └── location_repository_impl.dart
-│   ├── di/
-│   │   └── injection_container.dart
-│   ├── app.dart
-│   └── main.dart
-├── test/
-│   ├── features/
-│   │   ├── weather/
-│   │   │   ├── presentation/
-│   │   │   │   └── bloc/
-│   │   │   │       ├── weather_bloc_test.dart
-│   │   │   │       ├── city_bloc_test.dart
-│   │   │   │       └── location_bloc_test.dart
-│   │   │   ├── domain/
-│   │   │   │   └── usecases/
-│   │   │   │       ├── get_weather_for_city_test.dart
-│   │   │   │       ├── get_weather_for_location_test.dart
-│   │   │   │       ├── manage_cities_test.dart
-│   │   │   │       └── get_current_location_test.dart
-│   │   │   └── data/
-│   │   │       ├── datasources/
-│   │   │       │   ├── weather_api_service_test.dart
-│   │   │       │   ├── city_local_datasource_test.dart
-│   │   │       │   └── location_datasource_test.dart
-│   │   │       └── repositories/
-│   │   │           ├── weather_repository_impl_test.dart
-│   │   │           ├── city_repository_impl_test.dart
-│   │   │           └── location_repository_impl_test.dart
-├── pubspec.yaml
+### Color Theme
+The app uses a consistent color theme defined in `lib/core/constants/app_color.dart`. It includes:
+- Primary colors (blues for sky, yellows/oranges for sun).
+- Background and card colors for light and dark modes.
+- Text colors for readability.
+- A gradient for weather cards.
+- Support for dynamic theme switching based on device brightness.
 
 
 ### Dependencies
