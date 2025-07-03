@@ -83,6 +83,10 @@ The app uses the `go_router` package for type-safe navigation. Routes are define
 The app includes reusable UI components in `lib/features/weather/presentation/widgets/`:
 - `header_text.dart`: A customizable widget for displaying titles using Google Fonts' Roboto, with bold styling and theme-aware colors.
 - `description_text.dart`: A widget for displaying description text using Google Fonts' Open Sans, with secondary styling, supporting truncation and alignment.
+- `custom_toast.dart`: A utility for showing success or failure toast messages with icons, styled with theme-aware colors.
+- `horizontal_loader.dart`: A linear progress indicator for button loading states, using the app's primary color.
+- `circular_loader.dart`: A clean circular progress indicator for screen or widget loading, with customizable size and stroke width.
+- `custom_app_bar.dart`: A transparent app bar with customizable title and actions, using Google Fonts' Roboto.
 
 
 ### Dependencies
