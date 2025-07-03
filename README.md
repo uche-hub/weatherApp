@@ -74,6 +74,11 @@ The app uses a consistent color theme defined in `lib/core/constants/app_color.d
 - A gradient for weather cards.
 - Support for dynamic theme switching based on device brightness.
 
+### Navigation
+The app uses the `go_router` package for type-safe navigation. Routes are defined in `lib/core/constants/route.dart`, with path constants in `lib/core/constants/route_path.dart`. Key routes:
+- `/`: HomeScreen (displays weather carousel).
+- `/city-selection`: CitySelectionScreen (add/remove cities).
+
 
 ### Dependencies
 - `flutter_bloc`: For state management.
