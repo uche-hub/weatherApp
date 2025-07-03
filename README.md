@@ -79,6 +79,11 @@ The app uses the `go_router` package for type-safe navigation. Routes are define
 - `/`: HomeScreen (displays weather carousel).
 - `/city-selection`: CitySelectionScreen (add/remove cities).
 
+### Widgets
+The app includes reusable UI components in `lib/features/weather/presentation/widgets/`:
+- `header_text.dart`: A customizable widget for displaying titles using Google Fonts' Roboto, with bold styling and theme-aware colors.
+- `description_text.dart`: A widget for displaying description text using Google Fonts' Open Sans, with secondary styling, supporting truncation and alignment.
+
 
 ### Dependencies
 - `flutter_bloc`: For state management.
@@ -89,6 +94,8 @@ The app uses the `go_router` package for type-safe navigation. Routes are define
 - `mockito` and `test`: For unit testing.
 - `get_it`: For dependency injection.
 - `carousel_slider`: For carousel view.
+- `go_router`: For navigation.
+- `google_fonts`: For custom typography (Roboto and Open Sans).
 
 ### Predefined Cities
 The app includes the following 15 Nigerian cities:
