@@ -95,6 +95,16 @@ The app uses the BLoC pattern for state management, implemented in `lib/features
 - `location_bloc.dart`: Manages fetching the device's current location.
 Mock repositories in `lib/features/weather/data/mock_repositories.dart` simulate data fetching and persistence for development.
 
+## ✅ Automated Tests
+
+This project includes a widget test to verify that the `WeatherBloc` correctly loads weather data and updates the UI.
+
+**What it tests:**
+- When the app starts, it dispatches `LoadWeather` to the `WeatherBloc`.
+- It shows a loader and then displays the default city ("Lagos").
+- It displays the weather carousel and the menu icon.
+- Tapping the menu shows the **Manage Cities** dialog with the correct available cities.
+
 
 ### Dependencies
 - `flutter_bloc`: For state management.
