@@ -88,6 +88,13 @@ The app includes reusable UI components in `lib/features/weather/presentation/wi
 - `circular_loader.dart`: A clean circular progress indicator for screen or widget loading, with customizable size and stroke width.
 - `custom_app_bar.dart`: A transparent app bar with customizable title and actions, using Google Fonts' Roboto.
 
+### State Management
+The app uses the BLoC pattern for state management, implemented in `lib/features/weather/presentation/bloc/`:
+- `weather_bloc.dart`: Manages fetching and displaying weather data for cities and current location.
+- `city_bloc.dart`: Handles adding, removing, and persisting selected cities (up to 3).
+- `location_bloc.dart`: Manages fetching the device's current location.
+Mock repositories in `lib/features/weather/data/mock_repositories.dart` simulate data fetching and persistence for development.
+
 
 ### Dependencies
 - `flutter_bloc`: For state management.
@@ -97,7 +104,7 @@ The app includes reusable UI components in `lib/features/weather/presentation/wi
 - `equatable`: For comparing objects in BLoC states.
 - `mockito` and `test`: For unit testing.
 - `get_it`: For dependency injection.
-- `carousel_slider`: For carousel view.
+- `carousel_slider`: For carousel view in HomeScreen.
 - `go_router`: For navigation.
 - `google_fonts`: For custom typography (Roboto and Open Sans).
 

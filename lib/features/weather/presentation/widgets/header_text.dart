@@ -10,6 +10,7 @@ class HeaderText extends StatelessWidget {
   final TextAlign textAlign;
   final int? maxLines;
   final TextOverflow overflow;
+  final Color? color;
 
   const HeaderText({
     super.key,
@@ -18,6 +19,7 @@ class HeaderText extends StatelessWidget {
     this.fontWeight = FontWeight.bold,
     this.textAlign = TextAlign.start,
     this.maxLines,
+    this.color,
     this.overflow = TextOverflow.ellipsis,
   });
 
@@ -28,7 +30,9 @@ class HeaderText extends StatelessWidget {
       style: GoogleFonts.roboto(
         fontSize: fontSize,
         fontWeight: fontWeight,
-        color: Theme.of(context).textTheme.titleLarge?.color ?? AppColor.primaryTextLight,
+        color:
+            Theme.of(context).textTheme.titleLarge?.color ??
+            AppColor.primaryTextLight,
       ),
       textAlign: textAlign,
       maxLines: maxLines,

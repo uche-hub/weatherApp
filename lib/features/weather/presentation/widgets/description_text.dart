@@ -10,6 +10,7 @@ class DescriptionText extends StatelessWidget {
   final TextAlign textAlign;
   final int? maxLines;
   final TextOverflow overflow;
+  final Color? color;
 
   const DescriptionText({
     super.key,
@@ -18,6 +19,7 @@ class DescriptionText extends StatelessWidget {
     this.fontWeight = FontWeight.normal,
     this.textAlign = TextAlign.start,
     this.maxLines,
+    this.color,
     this.overflow = TextOverflow.ellipsis,
   });
 
@@ -28,7 +30,9 @@ class DescriptionText extends StatelessWidget {
       style: GoogleFonts.openSans(
         fontSize: fontSize,
         fontWeight: fontWeight,
-        color: Theme.of(context).textTheme.bodyMedium?.color ?? AppColor.secondaryTextLight,
+        color:
+            Theme.of(context).textTheme.bodyMedium?.color ??
+            AppColor.secondaryTextLight,
       ),
       textAlign: textAlign,
       maxLines: maxLines,
