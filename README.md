@@ -66,83 +66,44 @@ The app follows a **Clean Architecture** approach with **BLoC** for state manage
     - `CityRepositoryImpl`: Implements `CityRepository` to manage city persistence.
     - `LocationRepositoryImpl`: Implements `LocationRepository` to handle geolocation.
 
-### Folder Structure
-weather_app/
-├── lib/
-│   ├── core/
-│   │   ├── constants/
-│   │   │   └── cities.dart
-│   │   ├── error/
-│   │   │   └── failures.dart
-│   │   └── network/
-│   │       └── network_info.dart
-│   ├── features/
-│   │   ├── weather/
-│   │   │   ├── presentation/
-│   │   │   │   ├── bloc/
-│   │   │   │   │   ├── weather_bloc.dart
-│   │   │   │   │   ├── city_bloc.dart
-│   │   │   │   │   └── location_bloc.dart
-│   │   │   │   ├── screens/
-│   │   │   │   │   ├── home_screen.dart
-│   │   │   │   │   └── city_selection_screen.dart
-│   │   │   │   └── widgets/
-│   │   │   │       ├── weather_card.dart
-│   │   │   │       └── carousel_view.dart
-│   │   │   ├── domain/
-│   │   │   │   ├── entities/
-│   │   │   │   │   ├── weather.dart
-│   │   │   │   │   ├── city.dart
-│   │   │   │   │   └── location.dart
-│   │   │   │   ├── usecases/
-│   │   │   │   │   ├── get_weather_for_city.dart
-│   │   │   │   │   ├── get_weather_for_location.dart
-│   │   │   │   │   ├── manage_cities.dart
-│   │   │   │   │   └── get_current_location.dart
-│   │   │   │   └── repositories/
-│   │   │   │       ├── weather_repository.dart
-│   │   │   │       ├── city_repository.dart
-│   │   │   │       └── location_repository.dart
-│   │   │   └── data/
-│   │   │       ├── models/
-│   │   │       │   ├── weather_model.dart
-│   │   │       │   └── city_model.dart
-│   │   │       ├── datasources/
-│   │   │       │   ├── weather_api_service.dart
-│   │   │       │   ├── city_local_datasource.dart
-│   │   │       │   └── location_datasource.dart
-│   │   │       └── repositories/
-│   │   │           ├── weather_repository_impl.dart
-│   │   │           ├── city_repository_impl.dart
-│   │   │           └── location_repository_impl.dart
-│   ├── di/
-│   │   └── injection_container.dart
-│   ├── app.dart
-│   └── main.dart
-├── test/
-│   ├── features/
-│   │   ├── weather/
-│   │   │   ├── presentation/
-│   │   │   │   └── bloc/
-│   │   │   │       ├── weather_bloc_test.dart
-│   │   │   │       ├── city_bloc_test.dart
-│   │   │   │       └── location_bloc_test.dart
-│   │   │   ├── domain/
-│   │   │   │   └── usecases/
-│   │   │   │       ├── get_weather_for_city_test.dart
-│   │   │   │       ├── get_weather_for_location_test.dart
-│   │   │   │       ├── manage_cities_test.dart
-│   │   │   │       └── get_current_location_test.dart
-│   │   │   └── data/
-│   │   │       ├── datasources/
-│   │   │       │   ├── weather_api_service_test.dart
-│   │   │       │   ├── city_local_datasource_test.dart
-│   │   │       │   └── location_datasource_test.dart
-│   │   │       └── repositories/
-│   │   │           ├── weather_repository_impl_test.dart
-│   │   │           ├── city_repository_impl_test.dart
-│   │   │           └── location_repository_impl_test.dart
-├── pubspec.yaml
+### Color Theme
+The app uses a consistent color theme defined in `lib/core/constants/app_color.dart`. It includes:
+- Primary colors (blues for sky, yellows/oranges for sun).
+- Background and card colors for light and dark modes.
+- Text colors for readability.
+- A gradient for weather cards.
+- Support for dynamic theme switching based on device brightness.
+
+### Navigation
+The app uses the `go_router` package for type-safe navigation. Routes are defined in `lib/core/constants/route.dart`, with path constants in `lib/core/constants/route_path.dart`. Key routes:
+- `/`: HomeScreen (displays weather carousel).
+- `/city-selection`: CitySelectionScreen (add/remove cities).
+
+### Widgets
+The app includes reusable UI components in `lib/features/weather/presentation/widgets/`:
+- `header_text.dart`: A customizable widget for displaying titles using Google Fonts' Roboto, with bold styling and theme-aware colors.
+- `description_text.dart`: A widget for displaying description text using Google Fonts' Open Sans, with secondary styling, supporting truncation and alignment.
+- `custom_toast.dart`: A utility for showing success or failure toast messages with icons, styled with theme-aware colors.
+- `horizontal_loader.dart`: A linear progress indicator for button loading states, using the app's primary color.
+- `circular_loader.dart`: A clean circular progress indicator for screen or widget loading, with customizable size and stroke width.
+- `custom_app_bar.dart`: A transparent app bar with customizable title and actions, using Google Fonts' Roboto.
+
+### State Management
+The app uses the BLoC pattern for state management, implemented in `lib/features/weather/presentation/bloc/`:
+- `weather_bloc.dart`: Manages fetching and displaying weather data for cities and current location.
+- `city_bloc.dart`: Handles adding, removing, and persisting selected cities (up to 3).
+- `location_bloc.dart`: Manages fetching the device's current location.
+Mock repositories in `lib/features/weather/data/mock_repositories.dart` simulate data fetching and persistence for development.
+
+## ✅ Automated Tests
+
+This project includes a widget test to verify that the `WeatherBloc` correctly loads weather data and updates the UI.
+
+**What it tests:**
+- When the app starts, it dispatches `LoadWeather` to the `WeatherBloc`.
+- It shows a loader and then displays the default city ("Lagos").
+- It displays the weather carousel and the menu icon.
+- Tapping the menu shows the **Manage Cities** dialog with the correct available cities.
 
 
 ### Dependencies
@@ -153,7 +114,9 @@ weather_app/
 - `equatable`: For comparing objects in BLoC states.
 - `mockito` and `test`: For unit testing.
 - `get_it`: For dependency injection.
-- `carousel_slider`: For carousel view.
+- `carousel_slider`: For carousel view in HomeScreen.
+- `go_router`: For navigation.
+- `google_fonts`: For custom typography (Roboto and Open Sans).
 
 ### Predefined Cities
 The app includes the following 15 Nigerian cities:
