@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:weather_app/core/constants/app_color.dart';
 
-/// A reusable widget for displaying description text in the weather app.
 class DescriptionText extends StatelessWidget {
   final String text;
   final double fontSize;
@@ -30,9 +29,7 @@ class DescriptionText extends StatelessWidget {
       style: GoogleFonts.openSans(
         fontSize: fontSize,
         fontWeight: fontWeight,
-        color:
-            Theme.of(context).textTheme.bodyMedium?.color ??
-            AppColor.secondaryTextLight,
+        color: color ?? AppColor.secondaryTextDark, // Fallback to secondaryTextDark
       ),
       textAlign: textAlign,
       maxLines: maxLines,

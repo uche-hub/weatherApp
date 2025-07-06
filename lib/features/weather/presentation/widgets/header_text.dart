@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:weather_app/core/constants/app_color.dart';
 
-/// A reusable widget for displaying header text (e.g., titles) in the weather app.
 class HeaderText extends StatelessWidget {
   final String text;
   final double fontSize;
@@ -30,9 +29,7 @@ class HeaderText extends StatelessWidget {
       style: GoogleFonts.roboto(
         fontSize: fontSize,
         fontWeight: fontWeight,
-        color:
-            Theme.of(context).textTheme.titleLarge?.color ??
-            AppColor.primaryTextLight,
+        color: color ?? AppColor.primaryTextDark, // Fallback to primaryTextDark
       ),
       textAlign: textAlign,
       maxLines: maxLines,

@@ -5,6 +5,8 @@ import 'package:weather_app/core/constants/app_color.dart';
 import 'package:weather_app/features/weather/presentation/bloc/weather_bloc.dart';
 import 'package:weather_app/features/weather/presentation/widgets/circular_loader.dart';
 import 'package:weather_app/features/weather/presentation/widgets/city_add_remove_dialog.dart';
+import 'package:weather_app/features/weather/presentation/widgets/header_text.dart';
+import 'package:weather_app/features/weather/presentation/widgets/description_text.dart';
 import 'package:weather_app/features/weather/data/models/city_weather.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -14,28 +16,56 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _animationController;
+  late AnimationController _pulseController;
+  late AnimationController _weatherIconController;
   late Animation<double> _fadeAnimation;
+  late Animation<double> _slideAnimation;
+  late Animation<double> _pulseAnimation;
+  late Animation<double> _weatherIconAnimation;
   int _currentCarouselIndex = 0;
+  bool _isExpanded = false;
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 1200),
     );
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    );
+    _weatherIconController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3000),
+    );
+
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
+    _slideAnimation = Tween<double>(begin: 50.0, end: 0.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.elasticOut),
+    );
+    _pulseAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+    _weatherIconAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _weatherIconController, curve: Curves.easeInOut),
+    );
+
     _animationController.forward();
+    _pulseController.repeat(reverse: true);
+    _weatherIconController.repeat();
   }
 
   @override
   void dispose() {
     _animationController.dispose();
+    _pulseController.dispose();
+    _weatherIconController.dispose();
     super.dispose();
   }
 
@@ -78,15 +108,35 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColor.darkBackground,
       body: BlocBuilder<WeatherBloc, WeatherState>(
         builder: (context, state) {
           if (state is WeatherLoading) return const CircularLoader();
           if (state is WeatherError) {
-            return Center(
-              child: Text(
-                state.message,
-                style: TextStyle(color: AppColor.errorRed),
+            return Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [AppColor.primaryDarkBlue, AppColor.darkBackground],
+                ),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: AppColor.errorRed,
+                    ),
+                    const SizedBox(height: 16),
+                    DescriptionText(
+                      text: state.message,
+                      color: AppColor.primaryTextDark,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -94,491 +144,7 @@ class _HomeScreenState extends State<HomeScreen>
             final cities = state.cities.length > 3
                 ? state.cities.sublist(0, 3)
                 : state.cities;
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: Column(
-                children: [
-                  // Custom app bar with menu and current location
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: AppColor.weatherGradient,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconButton(
-                          icon: Icon(
-                            Icons.menu,
-                            color: AppColor.primaryTextDark,
-                            size: 24,
-                          ),
-                          onPressed: () => _showCityDialog(context),
-                        ),
-                        ElevatedButton(
-                          onPressed: _getCurrentLocation,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColor.accentYellow,
-                            foregroundColor: AppColor.primaryTextDark,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                          ),
-                          child: Text(
-                            'Current Location',
-                            style: TextStyle(fontSize: 14),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SizedBox(height: 20),
-                        // Beautiful dropdown
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Select City',
-                                style: TextStyle(
-                                  color: AppColor.secondaryTextDark,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: AppColor.cardBackgroundDark.withAlpha(
-                                    102,
-                                  ),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: AppColor.secondaryTextDark.withAlpha(
-                                      51,
-                                    ),
-                                    width: 0.5,
-                                  ),
-                                ),
-                                child: Theme(
-                                  data: Theme.of(context).copyWith(
-                                    canvasColor: AppColor.cardBackgroundDark,
-                                  ),
-                                  child: DropdownButtonHideUnderline(
-                                    child: DropdownButton<String>(
-                                      value: cities.isNotEmpty
-                                          ? cities[_currentCarouselIndex]
-                                                .cityName
-                                          : 'Lagos',
-                                      icon: Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: BoxDecoration(
-                                          color: AppColor.primaryBlue.withAlpha(
-                                            77,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        child: Icon(
-                                          Icons.keyboard_arrow_down_rounded,
-                                          color: AppColor.primaryTextDark,
-                                          size: 20,
-                                        ),
-                                      ),
-                                      iconSize: 32,
-                                      elevation: 16,
-                                      style: TextStyle(
-                                        color: AppColor.primaryTextDark,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      isExpanded: true,
-                                      dropdownColor:
-                                          AppColor.cardBackgroundDark,
-                                      borderRadius: BorderRadius.circular(16),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 12,
-                                      ),
-                                      onChanged: (String? newValue) {
-                                        if (newValue != null) {
-                                          setState(() {
-                                            _currentCarouselIndex = cities
-                                                .indexWhere(
-                                                  (city) =>
-                                                      city.cityName == newValue,
-                                                );
-                                          });
-                                        }
-                                      },
-                                      items: cities.map<DropdownMenuItem<String>>((
-                                        CityWeather value,
-                                      ) {
-                                        return DropdownMenuItem<String>(
-                                          value: value.cityName,
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 4,
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                Container(
-                                                  width: 6,
-                                                  height: 6,
-                                                  margin: const EdgeInsets.only(
-                                                    right: 12,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    shape: BoxShape.circle,
-                                                    color:
-                                                        value.cityName ==
-                                                            cities[_currentCarouselIndex]
-                                                                .cityName
-                                                        ? AppColor.primaryBlue
-                                                        : AppColor
-                                                              .secondaryTextDark
-                                                              .withAlpha(128),
-                                                  ),
-                                                ),
-                                                Expanded(
-                                                  child: Text(
-                                                    value.cityName,
-                                                    style: TextStyle(
-                                                      color:
-                                                          value.cityName ==
-                                                              cities[_currentCarouselIndex]
-                                                                  .cityName
-                                                          ? AppColor
-                                                                .primaryTextDark
-                                                          : AppColor
-                                                                .secondaryTextDark,
-                                                      fontSize: 16,
-                                                      fontWeight:
-                                                          value.cityName ==
-                                                              cities[_currentCarouselIndex]
-                                                                  .cityName
-                                                          ? FontWeight.w600
-                                                          : FontWeight.w400,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 30),
-                        // Swipeable weather icon with temperature
-                        SizedBox(
-                          height: 200,
-                          child: CarouselSlider.builder(
-                            itemCount: cities.length,
-                            itemBuilder: (context, index, _) {
-                              final city = cities[index];
-                              return SizedBox(
-                                width: 300,
-                                height: 250,
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    Positioned(
-                                      bottom: 3,
-                                      left: 50,
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withAlpha(51),
-                                              blurRadius: 20,
-                                              offset: const Offset(0, 10),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Icon(
-                                          Icons.cloud,
-                                          size: 140,
-                                          color: Colors.grey.shade500,
-                                        ),
-                                      ),
-                                    ),
-                                    Positioned(
-                                      bottom: 50,
-                                      right: 70,
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withAlpha(38),
-                                              blurRadius: 15,
-                                              offset: const Offset(0, 8),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Icon(
-                                          Icons.cloud,
-                                          size: 80,
-                                          color: Colors.grey.shade400,
-                                        ),
-                                      ),
-                                    ),
-                                    Positioned(
-                                      top: 20,
-                                      left: 40,
-                                      child: Container(
-                                        width: 80,
-                                        height: 80,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          gradient: LinearGradient(
-                                            begin: Alignment.topLeft,
-                                            end: Alignment.bottomRight,
-                                            colors: [
-                                              Colors.purple.shade300,
-                                              Colors.purple.shade600,
-                                            ],
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.purple.withAlpha(
-                                                77,
-                                              ),
-                                              blurRadius: 20,
-                                              offset: const Offset(0, 8),
-                                            ),
-                                            BoxShadow(
-                                              color: Colors.white.withAlpha(51),
-                                              blurRadius: 2,
-                                              offset: const Offset(-2, -2),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Container(
-                                          margin: const EdgeInsets.all(8),
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            gradient: LinearGradient(
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                              colors: [
-                                                Colors.purple.shade200,
-                                                Colors.purple.shade500,
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    Positioned(
-                                      bottom: 60,
-                                      right: 30,
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.end,
-                                        children: [
-                                          Text(
-                                            city.temperature,
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 84,
-                                              fontWeight: FontWeight.w100,
-                                              letterSpacing: -2,
-                                              shadows: [
-                                                Shadow(
-                                                  color: Colors.black.withAlpha(
-                                                    77,
-                                                  ),
-                                                  blurRadius: 10,
-                                                  offset: const Offset(2, 2),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            options: CarouselOptions(
-                              height: 200,
-                              enlargeCenterPage: true,
-                              viewportFraction: 0.9,
-                              initialPage: _currentCarouselIndex,
-                              onPageChanged: (index, reason) {
-                                setState(() {
-                                  _currentCarouselIndex = index;
-                                });
-                              },
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 30),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: _buildSmartIndicators(cities.length),
-                          ),
-                        ),
-                        const SizedBox(height: 30),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                cities[_currentCarouselIndex].cityName,
-                                style: TextStyle(
-                                  color: AppColor.primaryTextDark,
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.w300,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Updated 2 min ago',
-                                style: TextStyle(
-                                  color: AppColor.secondaryTextDark,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              Text(
-                                cities[_currentCarouselIndex].range,
-                                style: TextStyle(
-                                  color: AppColor.primaryTextDark,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w300,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                cities[_currentCarouselIndex].description,
-                                style: TextStyle(
-                                  color: AppColor.secondaryTextDark,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Saturday, July 05, 2025, 07:04 PM WAT',
-                                style: TextStyle(
-                                  color: AppColor.secondaryTextDark,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    margin: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColor.cardBackgroundDark.withAlpha(77),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: AppColor.secondaryTextDark.withAlpha(51),
-                        width: 0.5,
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      AppColor.primaryBlue,
-                                      AppColor.primaryDarkBlue,
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(15),
-                                ),
-                                child: Text(
-                                  'Hourly forecast',
-                                  style: TextStyle(
-                                    color: AppColor.primaryTextDark,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 20),
-                              Text(
-                                'Weekly forecast',
-                                style: TextStyle(
-                                  color: AppColor.secondaryTextDark,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          height: 0.5,
-                          color: AppColor.secondaryTextDark.withAlpha(51),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              _buildStat('Humidity', '94%', Icons.water_drop),
-                              Container(
-                                height: 50,
-                                width: 0.5,
-                                color: AppColor.secondaryTextDark.withAlpha(77),
-                              ),
-                              _buildStat('Wind', '7km/h', Icons.air),
-                              Container(
-                                height: 50,
-                                width: 0.5,
-                                color: AppColor.secondaryTextDark.withAlpha(77),
-                              ),
-                              _buildStat(
-                                'Precipitation',
-                                '30%',
-                                Icons.umbrella,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
+            return _buildWeatherUI(cities);
           }
           return const CircularLoader();
         },
@@ -586,121 +152,666 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildStat(String label, String value, IconData icon) {
-    return Column(
-      children: [
-        Icon(icon, color: AppColor.secondaryTextDark, size: 24),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: TextStyle(
-            color: AppColor.primaryTextDark,
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
+  Widget _buildWeatherUI(List<CityWeather> cities) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColor.primaryBlue,
+            AppColor.primaryDarkBlue,
+            AppColor.darkBackground,
+          ],
+          stops: const [0.0, 0.6, 1.0],
+        ),
+      ),
+      child: SafeArea(
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Column(
+            children: [
+              _buildModernAppBar(),
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 20),
+                      _buildCitySelector(cities),
+                      const SizedBox(height: 40),
+                      _buildWeatherDisplay(cities),
+                      const SizedBox(height: 30),
+                      _buildIndicators(cities.length),
+                      const SizedBox(height: 40),
+                      _buildWeatherDetails(cities),
+                      const SizedBox(height: 20),
+                      _buildForecastSection(),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildModernAppBar() {
+    return AnimatedBuilder(
+      animation: _slideAnimation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _slideAnimation.value),
+          child: Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColor.cardBackgroundDark,
+                  AppColor.cardBackgroundDark.withValues(alpha: 0.6),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(
+                color: AppColor.primaryTextDark.withValues(alpha: 0.2),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColor.darkBackground.withValues(alpha: 0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                GestureDetector(
+                  onTap: () => _showCityDialog(context),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColor.primaryDarkBlue.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(
+                        color: AppColor.primaryTextDark.withValues(alpha: 0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.menu_rounded,
+                      color: AppColor.primaryTextDark,
+                      size: 22,
+                    ),
+                  ),
+                ),
+                HeaderText(
+                  text: 'Weather',
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: AppColor.primaryTextDark,
+                ),
+                GestureDetector(
+                  onTap: _getCurrentLocation,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [AppColor.accentYellow, AppColor.accentOrange],
+                      ),
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColor.accentYellow.withValues(alpha: 0.4),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.my_location,
+                          color: AppColor.primaryTextDark,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        DescriptionText(
+                          text: 'Current',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColor.primaryTextDark,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCitySelector(List<CityWeather> cities) {
+    return AnimatedBuilder(
+      animation: _slideAnimation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _slideAnimation.value * 1.5),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: AppColor.cardBackgroundDark,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AppColor.primaryTextDark.withValues(alpha: 0.2),
+                width: 1,
+              ),
+            ),
+            child: Theme(
+              data: Theme.of(
+                context,
+              ).copyWith(canvasColor: AppColor.darkBackground),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: cities.isNotEmpty
+                      ? cities[_currentCarouselIndex].cityName
+                      : 'Lagos',
+                  icon: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColor.primaryDarkBlue.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: AppColor.primaryTextDark,
+                      size: 20,
+                    ),
+                  ),
+                  isExpanded: true,
+                  dropdownColor: AppColor.cardBackgroundDark,
+                  borderRadius: BorderRadius.circular(20),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
+                  style: TextStyle(
+                    color: AppColor.primaryTextDark,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  onChanged: (String? newValue) {
+                    if (newValue != null) {
+                      setState(() {
+                        _currentCarouselIndex = cities.indexWhere(
+                          (city) => city.cityName == newValue,
+                        );
+                      });
+                    }
+                  },
+                  items: cities.map<DropdownMenuItem<String>>((
+                    CityWeather value,
+                  ) {
+                    return DropdownMenuItem<String>(
+                      value: value.cityName,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              margin: const EdgeInsets.only(right: 15),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color:
+                                    value.cityName ==
+                                        cities[_currentCarouselIndex].cityName
+                                    ? AppColor.accentYellow
+                                    : AppColor.secondaryTextDark,
+                              ),
+                            ),
+                            HeaderText(
+                              text: value.cityName,
+                              fontSize: 16,
+                              fontWeight:
+                                  value.cityName ==
+                                      cities[_currentCarouselIndex].cityName
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                              color:
+                                  value.cityName ==
+                                      cities[_currentCarouselIndex].cityName
+                                  ? AppColor.primaryTextDark
+                                  : AppColor.secondaryTextDark,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildWeatherDisplay(List<CityWeather> cities) {
+    return SizedBox(
+      height: 280,
+      child: CarouselSlider.builder(
+        itemCount: cities.length,
+        itemBuilder: (context, index, _) {
+          final city = cities[index];
+          return _buildWeatherCard(city);
+        },
+        options: CarouselOptions(
+          height: 280,
+          enlargeCenterPage: true,
+          viewportFraction: 0.85,
+          initialPage: _currentCarouselIndex,
+          onPageChanged: (index, reason) {
+            setState(() {
+              _currentCarouselIndex = index;
+            });
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWeatherCard(CityWeather city) {
+    return AnimatedBuilder(
+      animation: _pulseAnimation,
+      builder: (insertions, child) {
+        return Transform.scale(
+          scale: _pulseAnimation.value,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColor.cardBackgroundDark,
+                  AppColor.cardBackgroundDark.withValues(alpha: 0.7),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(
+                color: AppColor.primaryTextDark.withValues(alpha: 0.2),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColor.darkBackground.withValues(alpha: 0.3),
+                  blurRadius: 25,
+                  offset: const Offset(0, 15),
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  top: -20,
+                  right: -20,
+                  child: AnimatedBuilder(
+                    animation: _weatherIconAnimation,
+                    builder: (context, child) {
+                      return Transform.rotate(
+                        angle: _weatherIconAnimation.value * 2 * 3.14159,
+                        child: Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColor.primaryBlue.withValues(alpha: 0.2),
+                                AppColor.primaryDarkBlue.withValues(alpha: 0.2),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Positioned(
+                  top: 30,
+                  left: 30,
+                  child: Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [AppColor.accentYellow, AppColor.accentOrange],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColor.accentYellow.withValues(alpha: 0.4),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.wb_sunny,
+                      color: AppColor.primaryTextDark,
+                      size: 40,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 40,
+                  right: 30,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      HeaderText(
+                        text: city.temperature,
+                        fontSize: 64,
+                        fontWeight: FontWeight.w100,
+                        color: AppColor.primaryTextDark,
+                      ),
+                      DescriptionText(
+                        text: city.description,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w400,
+                        color: AppColor.secondaryTextDark,
+                      ),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  bottom: 20,
+                  left: 30,
+                  child: HeaderText(
+                    text: city.cityName,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
+                    color: AppColor.primaryTextDark,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildIndicators(int itemCount) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(itemCount, (index) {
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          width: index == _currentCarouselIndex ? 24 : 8,
+          height: 8,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(4),
+            color: index == _currentCarouselIndex
+                ? AppColor.accentYellow
+                : AppColor.primaryTextDark.withValues(alpha: 0.3),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildWeatherDetails(List<CityWeather> cities) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColor.cardBackgroundDark,
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(
+          color: AppColor.primaryTextDark.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              HeaderText(
+                text: cities[_currentCarouselIndex].cityName,
+                fontSize: 28,
+                fontWeight: FontWeight.w600,
+                color: AppColor.primaryTextDark,
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColor.successGreen.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: DescriptionText(
+                  text: 'Live',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColor.successGreen,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          DescriptionText(
+            text: cities[_currentCarouselIndex].range,
+            fontSize: 18,
+            fontWeight: FontWeight.w400,
+            color: AppColor.secondaryTextDark,
+          ),
+          const SizedBox(height: 4),
+          DescriptionText(
+            text: 'Sunday, July 06, 2025, 12:13 PM WAT',
+            fontSize: 14,
+            color: AppColor.secondaryTextDark,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildForecastSection() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: AppColor.cardBackgroundDark,
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(
+          color: AppColor.primaryTextDark.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _isExpanded = !_isExpanded;
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: !_isExpanded
+                          ? LinearGradient(
+                              colors: [
+                                AppColor.primaryBlue,
+                                AppColor.primaryDarkBlue,
+                              ],
+                            )
+                          : null,
+                      color: _isExpanded ? Colors.transparent : null,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: AppColor.primaryTextDark.withValues(alpha: 0.2),
+                        width: 1,
+                      ),
+                    ),
+                    child: DescriptionText(
+                      text: 'Hourly forecast',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColor.primaryTextDark,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 20),
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _isExpanded = !_isExpanded;
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: _isExpanded
+                          ? LinearGradient(
+                              colors: [
+                                AppColor.primaryBlue,
+                                AppColor.primaryDarkBlue,
+                              ],
+                            )
+                          : null,
+                      color: !_isExpanded ? Colors.transparent : null,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: AppColor.primaryTextDark.withValues(alpha: 0.2),
+                        width: 1,
+                      ),
+                    ),
+                    child: DescriptionText(
+                      text: 'Weekly forecast',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColor.primaryTextDark,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            height: 1,
+            color: AppColor.primaryTextDark.withValues(alpha: 0.1),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildStatItem(
+                  'Humidity',
+                  '94%',
+                  Icons.water_drop,
+                  AppColor.primaryBlue,
+                ),
+                _buildDivider(),
+                _buildStatItem(
+                  'Wind',
+                  '7km/h',
+                  Icons.air,
+                  AppColor.successGreen,
+                ),
+                _buildDivider(),
+                _buildStatItem(
+                  'Rain',
+                  '30%',
+                  Icons.umbrella,
+                  AppColor.primaryDarkBlue,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: color, size: 24),
+        ),
+        const SizedBox(height: 12),
+        HeaderText(
+          text: value,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: AppColor.primaryTextDark,
+        ),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(color: AppColor.secondaryTextDark, fontSize: 12),
+        DescriptionText(
+          text: label,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: AppColor.secondaryTextDark,
         ),
       ],
     );
   }
 
-  List<Widget> _buildSmartIndicators(int itemCount) {
-    const int maxVisibleDots = 7;
-    const int sideDotsCount = 3;
-
-    List<Widget> indicators = [];
-
-    if (itemCount <= maxVisibleDots) {
-      for (int i = 0; i < itemCount; i++) {
-        indicators.add(_buildIndicatorDot(i, i == _currentCarouselIndex));
-      }
-    } else {
-      if (_currentCarouselIndex <= sideDotsCount) {
-        for (int i = 0; i < maxVisibleDots - 1; i++) {
-          indicators.add(_buildIndicatorDot(i, i == _currentCarouselIndex));
-        }
-        indicators.add(_buildEllipsisDot());
-      } else if (_currentCarouselIndex >= itemCount - sideDotsCount - 1) {
-        indicators.add(_buildEllipsisDot());
-        for (int i = itemCount - (maxVisibleDots - 1); i < itemCount; i++) {
-          indicators.add(_buildIndicatorDot(i, i == _currentCarouselIndex));
-        }
-      } else {
-        indicators.add(_buildEllipsisDot());
-        for (
-          int i = _currentCarouselIndex - 1;
-          i <= _currentCarouselIndex + 1;
-          i++
-        ) {
-          indicators.add(_buildIndicatorDot(i, i == _currentCarouselIndex));
-        }
-        indicators.add(_buildEllipsisDot());
-      }
-    }
-
-    return indicators;
-  }
-
-  Widget _buildIndicatorDot(int index, bool isActive) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      margin: const EdgeInsets.symmetric(horizontal: 3),
-      width: isActive ? 12 : 8,
-      height: isActive ? 12 : 8,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: isActive
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [const Color(0xFF4A90E2), const Color(0xFF357ABD)],
-              )
-            : LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.grey.shade600.withAlpha(153),
-                  Colors.grey.shade700.withAlpha(102),
-                ],
-              ),
-        boxShadow: isActive
-            ? [
-                BoxShadow(
-                  color: const Color(0xFF4A90E2).withAlpha(102),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-                BoxShadow(
-                  color: const Color(0xFF4A90E2).withAlpha(51),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : [
-                BoxShadow(
-                  color: Colors.black.withAlpha(26),
-                  blurRadius: 2,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-      ),
-    );
-  }
-
-  Widget _buildEllipsisDot() {
+  Widget _buildDivider() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 3),
-      width: 6,
-      height: 6,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.grey.shade600.withAlpha(77),
-      ),
+      height: 60,
+      width: 1,
+      color: AppColor.primaryTextDark.withValues(alpha: 0.1),
     );
   }
 }
