@@ -9,13 +9,15 @@ import 'package:weather_app/features/weather/presentation/bloc/weather_bloc.dart
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Initialize Hive
   await Hive.initFlutter();
-  Hive.registerAdapter(CityWeatherAdapter());
-  await Hive.openBox<CityWeather>('weather_cities');
 
+  Hive.registerAdapter(CityWeatherAdapter()); // Register adapter once here
+
+  // Opens the box
   final weatherRepository = WeatherRepository();
-
-  runApp(MyApp(weatherRepository: weatherRepository));
+  await weatherRepository
+      .initializeHive(); // Initialize Hive with the repository
 
   runApp(MyApp(weatherRepository: weatherRepository));
 }
@@ -29,7 +31,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) =>
-          WeatherBloc(weatherRepository)..add(LoadWeather()), //  Start the bloc + trigger load ONCE
+          WeatherBloc(weatherRepository)
+            ..add(LoadWeather()), // Start the bloc + trigger load ONCE
       child: MaterialApp.router(
         title: 'Weather App',
         theme: AppColor.lightTheme,

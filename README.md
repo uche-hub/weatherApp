@@ -105,6 +105,32 @@ This project includes a widget test to verify that the `WeatherBloc` correctly l
 - It displays the weather carousel and the menu icon.
 - Tapping the menu shows the **Manage Cities** dialog with the correct available cities.
 
+### ✅ Unit Test
+
+**File:** `weather_repository_test.dart`
+
+This unit test covers the core functionality of the `WeatherRepository` and `CityWeather` model:
+
+- ✅ **`getCityOptions`**
+  - Returns exactly **15 predefined Nigerian cities**
+  - Validates the order (`Lagos` first, `Mushin` last)
+  - Ensures each city is a non-empty string with no invalid characters
+
+- ✅ **Input Validation**
+  - `addCity` throws a clear exception if `null`, empty, or whitespace-only
+  - `removeCity` throws a clear exception if `null` or empty
+
+- ✅ **CityWeather Model**
+  - Correctly stores city name, temperature, range, description, humidity, wind speed, precipitation
+  - Ensures temperature is formatted to **1 decimal place** with `°C`
+  - Checks wind speed is converted and formatted in `km/h`
+  - Validates humidity ends with `%` and is an integer between **0–100**
+  - Validates precipitation ends with `mm` and is non-negative
+
+- ✅ **Edge Cases**
+  - City names do not contain special characters (`&`, `?`, `=`) or unwanted spaces
+  - Temperature range is formatted as `"XX.X°C - YY.Y°C"`
+  - Wind speed and precipitation values are never negative
 
 ### Dependencies
 - `flutter_bloc`: For state management.

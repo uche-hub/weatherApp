@@ -5,9 +5,14 @@ import 'package:weather_app/core/constants/app_color.dart';
 import 'package:weather_app/features/weather/presentation/bloc/weather_bloc.dart';
 import 'package:weather_app/features/weather/presentation/widgets/circular_loader.dart';
 import 'package:weather_app/features/weather/presentation/widgets/city_add_remove_dialog.dart';
+import 'package:weather_app/features/weather/presentation/widgets/custom_toast.dart'
+    as custom_toast;
 import 'package:weather_app/features/weather/presentation/widgets/header_text.dart';
 import 'package:weather_app/features/weather/presentation/widgets/description_text.dart';
 import 'package:weather_app/features/weather/data/models/city_weather.dart';
+
+// This is the main screen of the weather app, handling the UI and city management.
+// It uses animations, a carousel for city weather display, and integrates with WeatherBloc for state management.
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,6 +35,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    // Initialize animation controllers for fade, slide, pulse, and weather icon effects.
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -67,42 +73,149 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _pulseController.dispose();
     _weatherIconController.dispose();
     super.dispose();
+    // Dispose of animation controllers to prevent memory leaks.
+  }
+
+  String _formatCurrentDateTime() {
+    final now = DateTime.now();
+    // Format: Monday, July 07, 2025, 11:21 AM WAT
+    final dayName = _getWeekdayName(now.weekday);
+    final monthName = _getMonthName(now.month);
+    final day = now.day.toString().padLeft(2, '0');
+    final year = now.year;
+    final hour = now.hour > 12 ? now.hour - 12 : now.hour;
+    final minute = now.minute.toString().padLeft(2, '0');
+    final amPm = now.hour >= 12 ? 'PM' : 'AM';
+
+    // Add your timezone manually or from DateTime if needed
+    const timezone = 'WAT';
+
+    return '$dayName, $monthName $day, $year, $hour:$minute $amPm $timezone';
+  }
+
+  String _getWeekdayName(int weekday) {
+    const weekdays = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    return weekdays[(weekday - 1) % 7];
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    return months[(month - 1) % 12];
   }
 
   void _showCityDialog(BuildContext context) {
-    final bloc = context.read<WeatherBloc>();
-    final state = bloc.state;
-    final selectedCities = state is WeatherLoaded
-        ? state.cities.map((cw) => cw.cityName).cast<String>().toList()
-        : <String>[];
-    final availableCities = [
-      'Lagos',
-      'Abuja',
-      'Ibadan',
-      'Awka',
-      'Kano',
-      'Port Harcourt',
-      'Nneyi-Umuleri',
-      'Onitsha',
-      'Maiduguri',
-      'Aba',
-      'Benin City',
-      'Shagamu',
-      'Ikare',
-      'Ogbomoso',
-      'Mushin',
-    ]..removeWhere((city) => selectedCities.contains(city));
     showDialog(
       context: context,
-      builder: (context) => CityAddRemoveDialog(
-        availableCities: availableCities,
-        selectedCities: selectedCities,
+      builder: (context) => BlocBuilder<WeatherBloc, WeatherState>(
+        builder: (context, state) {
+          final selectedCities = state is WeatherLoaded
+              ? state.cities
+                    .map((cw) => cw.cityName ?? 'Unknown')
+                    .cast<String>()
+                    .toList()
+              : <String>[];
+          final availableCities = [
+            'Lagos',
+            'Abuja',
+            'Ibadan',
+            'Awka',
+            'Kano',
+            'Port Harcourt',
+            'Nneyi-Umuleri',
+            'Onitsha',
+            'Maiduguri',
+            'Aba',
+            'Benin City',
+            'Shagamu',
+            'Ikare',
+            'Ogbomoso',
+            'Mushin',
+          ]..removeWhere((city) => selectedCities.contains(city));
+          return CityAddRemoveDialog(
+            initialAvailableCities: availableCities,
+            initialSelectedCities: selectedCities,
+            onCitySelected: (city) {
+              if (mounted) {
+                context.read<WeatherBloc>().add(AddCity(city));
+                custom_toast.CustomToast.show(
+                  context: context,
+                  message: '$city has been added',
+                  type: custom_toast.ToastType.success,
+                );
+              }
+            },
+            onCityRemoved: (city) {
+              if (mounted) {
+                context.read<WeatherBloc>().add(RemoveCity(city));
+                custom_toast.CustomToast.show(
+                  context: context,
+                  message: '$city has been removed',
+                  type: custom_toast.ToastType.failure,
+                );
+                if (state is WeatherLoaded &&
+                    _currentCarouselIndex >= state.cities.length - 1) {
+                  setState(() {
+                    _currentCarouselIndex = state.cities.length > 1
+                        ? state.cities.length - 2
+                        : 0;
+                  });
+                }
+              }
+            },
+          );
+          // Show dialog for managing cities, updating based on current bloc state.
+        },
       ),
     );
   }
 
-  void _getCurrentLocation() {
-    context.read<WeatherBloc>().add(GetCurrentLocation());
+  void _getCurrentLocation() async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(child: CircularProgressIndicator()),
+      );
+
+      // Get location
+      final bloc = context.read<WeatherBloc>();
+      bloc.add(GetCurrentLocation());
+
+      // Wait a bit before closing dialog to ensure smooth UX
+      await Future.delayed(Duration(milliseconds: 500));
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        scaffoldMessenger.showSnackBar(
+          SnackBar(content: Text('Error getting location: ${e.toString()}')),
+        );
+      }
+    }
   }
 
   @override
@@ -141,12 +254,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             );
           }
           if (state is WeatherLoaded) {
-            final cities = state.cities.length > 3
-                ? state.cities.sublist(0, 3)
-                : state.cities;
+            final cities = state.cities;
+            if (_currentCarouselIndex >= cities.length) {
+              setState(() {
+                _currentCarouselIndex = cities.isNotEmpty
+                    ? cities.length - 1
+                    : 0;
+              });
+            }
             return _buildWeatherUI(cities);
           }
           return const CircularLoader();
+          // Build UI based on WeatherBloc state, handling loading, error, and loaded states.
         },
       ),
     );
@@ -175,20 +294,38 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               Expanded(
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 20),
-                      _buildCitySelector(cities),
-                      const SizedBox(height: 40),
-                      _buildWeatherDisplay(cities),
-                      const SizedBox(height: 30),
-                      _buildIndicators(cities.length),
-                      const SizedBox(height: 40),
-                      _buildWeatherDetails(cities),
-                      const SizedBox(height: 20),
-                      _buildForecastSection(),
-                      const SizedBox(height: 20),
-                    ],
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 10),
+                        _buildCitySelector(cities),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.35,
+                          child: _buildWeatherDisplay(cities),
+                        ),
+                        const SizedBox(height: 10),
+                        _buildIndicators(cities.length),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.2,
+                          child: _buildWeatherDetails(
+                            cities[_currentCarouselIndex],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.25,
+                          child: _buildForecastSection(
+                            cities[_currentCarouselIndex],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -196,6 +333,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ),
       ),
+      // Main UI container with gradient background and animated content.
     );
   }
 
@@ -206,27 +344,27 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         return Transform.translate(
           offset: Offset(0, _slideAnimation.value),
           child: Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(20),
+            margin: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
                   AppColor.cardBackgroundDark,
-                  AppColor.cardBackgroundDark.withValues(alpha: 0.6),
+                  AppColor.cardBackgroundDark.withAlpha(153),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(25),
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: AppColor.primaryTextDark.withValues(alpha: 0.2),
+                color: AppColor.primaryTextDark.withAlpha(51),
                 width: 1,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColor.darkBackground.withValues(alpha: 0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
+                  color: AppColor.darkBackground.withAlpha(77),
+                  blurRadius: 15,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
@@ -236,25 +374,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 GestureDetector(
                   onTap: () => _showCityDialog(context),
                   child: Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppColor.primaryDarkBlue.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(15),
+                      color: AppColor.primaryDarkBlue.withAlpha(51),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: AppColor.primaryTextDark.withValues(alpha: 0.3),
+                        color: AppColor.primaryTextDark.withAlpha(77),
                         width: 1,
                       ),
                     ),
                     child: const Icon(
                       Icons.menu_rounded,
                       color: AppColor.primaryTextDark,
-                      size: 22,
+                      size: 20,
                     ),
                   ),
                 ),
                 HeaderText(
                   text: 'Weather',
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: FontWeight.w600,
                   color: AppColor.primaryTextDark,
                 ),
@@ -262,19 +400,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   onTap: _getCurrentLocation,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
+                      horizontal: 12,
+                      vertical: 8,
                     ),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [AppColor.accentYellow, AppColor.accentOrange],
                       ),
-                      borderRadius: BorderRadius.circular(15),
+                      borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColor.accentYellow.withValues(alpha: 0.4),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                          color: AppColor.accentYellow.withAlpha(102),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
                         ),
                       ],
                     ),
@@ -284,12 +422,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         Icon(
                           Icons.my_location,
                           color: AppColor.primaryTextDark,
-                          size: 16,
+                          size: 14,
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 5),
                         DescriptionText(
                           text: 'Current',
-                          fontSize: 13,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: AppColor.primaryTextDark,
                         ),
@@ -312,13 +450,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         return Transform.translate(
           offset: Offset(0, _slideAnimation.value * 1.5),
           child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 20),
+            margin: const EdgeInsets.symmetric(horizontal: 8),
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
               color: AppColor.cardBackgroundDark,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(15),
               border: Border.all(
-                color: AppColor.primaryTextDark.withValues(alpha: 0.2),
+                color: AppColor.primaryTextDark.withAlpha(51),
                 width: 1,
               ),
             ),
@@ -329,30 +467,30 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   value: cities.isNotEmpty
-                      ? cities[_currentCarouselIndex].cityName
+                      ? (cities[_currentCarouselIndex].cityName ?? 'Unknown')
                       : 'Lagos',
                   icon: Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: AppColor.primaryDarkBlue.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(12),
+                      color: AppColor.primaryDarkBlue.withAlpha(77),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(
                       Icons.keyboard_arrow_down_rounded,
                       color: AppColor.primaryTextDark,
-                      size: 20,
+                      size: 18,
                     ),
                   ),
                   isExpanded: true,
                   dropdownColor: AppColor.cardBackgroundDark,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(15),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 16,
+                    horizontal: 15,
+                    vertical: 12,
                   ),
                   style: TextStyle(
                     color: AppColor.primaryTextDark,
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w500,
                   ),
                   onChanged: (String? newValue) {
@@ -367,36 +505,41 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   items: cities.map<DropdownMenuItem<String>>((
                     CityWeather value,
                   ) {
+                    final cityName = value.cityName ?? 'Unknown';
                     return DropdownMenuItem<String>(
-                      value: value.cityName,
+                      value: cityName,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        padding: const EdgeInsets.symmetric(vertical: 6),
                         child: Row(
                           children: [
                             Container(
-                              width: 8,
-                              height: 8,
-                              margin: const EdgeInsets.only(right: 15),
+                              width: 6,
+                              height: 6,
+                              margin: const EdgeInsets.only(right: 12),
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color:
-                                    value.cityName ==
-                                        cities[_currentCarouselIndex].cityName
+                                    cityName ==
+                                        (cities[_currentCarouselIndex]
+                                                .cityName ??
+                                            'Unknown')
                                     ? AppColor.accentYellow
                                     : AppColor.secondaryTextDark,
                               ),
                             ),
                             HeaderText(
-                              text: value.cityName,
-                              fontSize: 16,
+                              text: cityName,
+                              fontSize: 14,
                               fontWeight:
-                                  value.cityName ==
-                                      cities[_currentCarouselIndex].cityName
+                                  cityName ==
+                                      (cities[_currentCarouselIndex].cityName ??
+                                          'Unknown')
                                   ? FontWeight.w600
                                   : FontWeight.w400,
                               color:
-                                  value.cityName ==
-                                      cities[_currentCarouselIndex].cityName
+                                  cityName ==
+                                      (cities[_currentCarouselIndex].cityName ??
+                                          'Unknown')
                                   ? AppColor.primaryTextDark
                                   : AppColor.secondaryTextDark,
                             ),
@@ -410,83 +553,82 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
         );
+        // City selector dropdown with animated slide effect and dynamic city list.
       },
     );
   }
 
   Widget _buildWeatherDisplay(List<CityWeather> cities) {
-    return SizedBox(
-      height: 280,
-      child: CarouselSlider.builder(
-        itemCount: cities.length,
-        itemBuilder: (context, index, _) {
-          final city = cities[index];
-          return _buildWeatherCard(city);
+    return CarouselSlider.builder(
+      itemCount: cities.length,
+      itemBuilder: (context, index, _) {
+        final city = cities[index];
+        return _buildWeatherCard(city);
+      },
+      options: CarouselOptions(
+        height: MediaQuery.of(context).size.height * 0.35,
+        enlargeCenterPage: true,
+        viewportFraction: 0.85,
+        initialPage: _currentCarouselIndex,
+        onPageChanged: (index, reason) {
+          setState(() {
+            _currentCarouselIndex = index;
+          });
         },
-        options: CarouselOptions(
-          height: 280,
-          enlargeCenterPage: true,
-          viewportFraction: 0.85,
-          initialPage: _currentCarouselIndex,
-          onPageChanged: (index, reason) {
-            setState(() {
-              _currentCarouselIndex = index;
-            });
-          },
-        ),
       ),
+      // Carousel slider to display weather cards for all selected cities.
     );
   }
 
   Widget _buildWeatherCard(CityWeather city) {
     return AnimatedBuilder(
       animation: _pulseAnimation,
-      builder: (insertions, child) {
+      builder: (context, child) {
         return Transform.scale(
           scale: _pulseAnimation.value,
           child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 10),
+            margin: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
                   AppColor.cardBackgroundDark,
-                  AppColor.cardBackgroundDark.withValues(alpha: 0.7),
+                  AppColor.cardBackgroundDark.withAlpha(179),
                 ],
               ),
-              borderRadius: BorderRadius.circular(30),
+              borderRadius: BorderRadius.circular(25),
               border: Border.all(
-                color: AppColor.primaryTextDark.withValues(alpha: 0.2),
+                color: AppColor.primaryTextDark.withAlpha(51),
                 width: 1,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColor.darkBackground.withValues(alpha: 0.3),
-                  blurRadius: 25,
-                  offset: const Offset(0, 15),
+                  color: AppColor.darkBackground.withAlpha(77),
+                  blurRadius: 20,
+                  offset: const Offset(0, 12),
                 ),
               ],
             ),
             child: Stack(
               children: [
                 Positioned(
-                  top: -20,
-                  right: -20,
+                  top: -15,
+                  right: -15,
                   child: AnimatedBuilder(
                     animation: _weatherIconAnimation,
                     builder: (context, child) {
                       return Transform.rotate(
                         angle: _weatherIconAnimation.value * 2 * 3.14159,
                         child: Container(
-                          width: 100,
-                          height: 100,
+                          width: 80,
+                          height: 80,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             gradient: LinearGradient(
                               colors: [
-                                AppColor.primaryBlue.withValues(alpha: 0.2),
-                                AppColor.primaryDarkBlue.withValues(alpha: 0.2),
+                                AppColor.primaryBlue.withAlpha(51),
+                                AppColor.primaryDarkBlue.withAlpha(51),
                               ],
                             ),
                           ),
@@ -496,11 +638,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                 ),
                 Positioned(
-                  top: 30,
-                  left: 30,
+                  top: 20,
+                  left: 20,
                   child: Container(
-                    width: 80,
-                    height: 80,
+                    width: 60,
+                    height: 60,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
@@ -510,34 +652,34 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColor.accentYellow.withValues(alpha: 0.4),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
+                          color: AppColor.accentYellow.withAlpha(102),
+                          blurRadius: 15,
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
                     child: const Icon(
                       Icons.wb_sunny,
                       color: AppColor.primaryTextDark,
-                      size: 40,
+                      size: 30,
                     ),
                   ),
                 ),
                 Positioned(
-                  bottom: 40,
-                  right: 30,
+                  bottom: 30,
+                  right: 20,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       HeaderText(
-                        text: city.temperature,
-                        fontSize: 64,
+                        text: city.temperature ?? '0°C',
+                        fontSize: 48,
                         fontWeight: FontWeight.w100,
                         color: AppColor.primaryTextDark,
                       ),
                       DescriptionText(
-                        text: city.description,
-                        fontSize: 16,
+                        text: city.description ?? 'No data',
+                        fontSize: 14,
                         fontWeight: FontWeight.w400,
                         color: AppColor.secondaryTextDark,
                       ),
@@ -545,11 +687,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                 ),
                 Positioned(
-                  bottom: 20,
-                  left: 30,
+                  bottom: 15,
+                  left: 20,
                   child: HeaderText(
-                    text: city.cityName,
-                    fontSize: 24,
+                    text: city.cityName ?? 'Unknown',
+                    fontSize: 20,
                     fontWeight: FontWeight.w600,
                     color: AppColor.primaryTextDark,
                   ),
@@ -558,6 +700,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
         );
+        // Weather card with animated pulse effect, displaying temperature and description.
       },
     );
   }
@@ -568,29 +711,30 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       children: List.generate(itemCount, (index) {
         return AnimatedContainer(
           duration: const Duration(milliseconds: 300),
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          width: index == _currentCarouselIndex ? 24 : 8,
-          height: 8,
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          width: index == _currentCarouselIndex ? 18 : 6,
+          height: 6,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(3),
             color: index == _currentCarouselIndex
                 ? AppColor.accentYellow
-                : AppColor.primaryTextDark.withValues(alpha: 0.3),
+                : AppColor.primaryTextDark.withAlpha(77),
           ),
         );
       }),
+      // Indicators for the carousel, highlighting the current city.
     );
   }
 
-  Widget _buildWeatherDetails(List<CityWeather> cities) {
+  Widget _buildWeatherDetails(CityWeather city) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColor.cardBackgroundDark,
-        borderRadius: BorderRadius.circular(25),
+        borderRadius: BorderRadius.circular(15),
         border: Border.all(
-          color: AppColor.primaryTextDark.withValues(alpha: 0.2),
+          color: AppColor.primaryTextDark.withAlpha(51),
           width: 1,
         ),
       ),
@@ -601,62 +745,60 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               HeaderText(
-                text: cities[_currentCarouselIndex].cityName,
-                fontSize: 28,
+                text: city.cityName ?? 'Unknown',
+                fontSize: 20,
                 fontWeight: FontWeight.w600,
                 color: AppColor.primaryTextDark,
               ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: AppColor.successGreen.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
+                  color: AppColor.successGreen.withAlpha(51),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: DescriptionText(
                   text: 'Live',
-                  fontSize: 12,
+                  fontSize: 10,
                   fontWeight: FontWeight.w600,
                   color: AppColor.successGreen,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           DescriptionText(
-            text: cities[_currentCarouselIndex].range,
-            fontSize: 18,
+            text: city.range ?? '0°C - 0°C',
+            fontSize: 14,
             fontWeight: FontWeight.w400,
             color: AppColor.secondaryTextDark,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 3),
           DescriptionText(
-            text: 'Sunday, July 06, 2025, 12:13 PM WAT',
-            fontSize: 14,
+            text: _formatCurrentDateTime(),
+            fontSize: 10,
             color: AppColor.secondaryTextDark,
           ),
         ],
       ),
+      // Weather details section with city name, temperature range, and current date/time.
     );
   }
 
-  Widget _buildForecastSection() {
+  Widget _buildForecastSection(CityWeather city) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
+      margin: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
         color: AppColor.cardBackgroundDark,
-        borderRadius: BorderRadius.circular(25),
+        borderRadius: BorderRadius.circular(15),
         border: Border.all(
-          color: AppColor.primaryTextDark.withValues(alpha: 0.2),
+          color: AppColor.primaryTextDark.withAlpha(51),
           width: 1,
         ),
       ),
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -669,8 +811,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
+                      horizontal: 15,
+                      vertical: 6,
                     ),
                     decoration: BoxDecoration(
                       gradient: !_isExpanded
@@ -682,21 +824,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             )
                           : null,
                       color: _isExpanded ? Colors.transparent : null,
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: AppColor.primaryTextDark.withValues(alpha: 0.2),
+                        color: AppColor.primaryTextDark.withAlpha(51),
                         width: 1,
                       ),
                     ),
                     child: DescriptionText(
                       text: 'Hourly forecast',
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: AppColor.primaryTextDark,
                     ),
                   ),
                 ),
-                const SizedBox(width: 20),
+                const SizedBox(width: 10),
                 GestureDetector(
                   onTap: () {
                     setState(() {
@@ -706,8 +848,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
+                      horizontal: 15,
+                      vertical: 6,
                     ),
                     decoration: BoxDecoration(
                       gradient: _isExpanded
@@ -719,15 +861,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             )
                           : null,
                       color: !_isExpanded ? Colors.transparent : null,
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: AppColor.primaryTextDark.withValues(alpha: 0.2),
+                        color: AppColor.primaryTextDark.withAlpha(51),
                         width: 1,
                       ),
                     ),
                     child: DescriptionText(
                       text: 'Weekly forecast',
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: AppColor.primaryTextDark,
                     ),
@@ -736,32 +878,29 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ],
             ),
           ),
-          Container(
-            height: 1,
-            color: AppColor.primaryTextDark.withValues(alpha: 0.1),
-          ),
+          Container(height: 1, color: AppColor.primaryTextDark.withAlpha(26)),
           Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 _buildStatItem(
                   'Humidity',
-                  '94%',
+                  city.humidity ?? '0%',
                   Icons.water_drop,
                   AppColor.primaryBlue,
                 ),
                 _buildDivider(),
                 _buildStatItem(
                   'Wind',
-                  '7km/h',
+                  city.windSpeed ?? '0km/h',
                   Icons.air,
                   AppColor.successGreen,
                 ),
                 _buildDivider(),
                 _buildStatItem(
-                  'Rain',
-                  '30%',
+                  'Precipitation',
+                  city.precipitation ?? '0mm',
                   Icons.umbrella,
                   AppColor.primaryDarkBlue,
                 ),
@@ -770,6 +909,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ],
       ),
+      // Forecast section with toggleable hourly/weekly view and weather stats.
     );
   }
 
@@ -782,36 +922,38 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(12),
+            color: color.withAlpha(51),
+            borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: color, size: 24),
+          child: Icon(icon, color: color, size: 16),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         HeaderText(
           text: value,
-          fontSize: 18,
+          fontSize: 14,
           fontWeight: FontWeight.w600,
           color: AppColor.primaryTextDark,
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 3),
         DescriptionText(
           text: label,
-          fontSize: 12,
+          fontSize: 10,
           fontWeight: FontWeight.w500,
           color: AppColor.secondaryTextDark,
         ),
       ],
+      // Stat item widget for displaying weather metrics like humidity, wind, and rain.
     );
   }
 
   Widget _buildDivider() {
     return Container(
-      height: 60,
+      height: 40,
       width: 1,
-      color: AppColor.primaryTextDark.withValues(alpha: 0.1),
+      color: AppColor.primaryTextDark.withAlpha(26),
+      // Divider between stat items in the forecast section.
     );
   }
 }
