@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:weather_app/core/network/api_key.dart';
+import 'package:weather_app/api_key.dart';
 import 'package:weather_app/features/weather/data/models/city_weather.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
@@ -79,6 +79,7 @@ class WeatherRepository {
     // Check if city already exists
     if (!_box.values.map((cw) => cw.cityName).contains(cityName)) {
       final response = await http.get(
+        // Create your own OpenWeatherMap API Key and attach replace $apikey
         Uri.parse(
           'https://api.openweathermap.org/data/2.5/weather?q=$cityName&appid=$apiKey&units=metric',
         ),
@@ -188,6 +189,7 @@ class WeatherRepository {
 
       // Fetch weather data from OpenWeatherMap API using coordinates
       final response = await http.get(
+        // Create your own OpenWeatherMap API Key and attach replace $apikey
         Uri.parse(
           'https://api.openweathermap.org/data/2.5/weather?lat=${position.latitude}&lon=${position.longitude}&appid=$apiKey&units=metric',
         ),
