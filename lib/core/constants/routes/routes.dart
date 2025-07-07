@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:weather_app/core/constants/routes/route_path.dart';
-import 'package:weather_app/features/weather/presentation/screens/city_selection_screen.dart';
 import 'package:weather_app/features/weather/presentation/screens/home_screen.dart';
 
 // Configures the GoRouter instance for app navigation with no transition pages.
@@ -13,14 +12,6 @@ final GoRouter router = GoRouter(
       pageBuilder: (BuildContext context, GoRouterState state) {
         return const NoTransitionPage(
           child: HomeScreen(),
-        );
-      },
-    ),
-    GoRoute(
-      path: RoutePath.citySelection,
-      pageBuilder: (BuildContext context, GoRouterState state) {
-        return const NoTransitionPage(
-          child: CitySelectionScreen(),
         );
       },
     ),
