@@ -57,6 +57,7 @@ void main() {
 
     test('should return cities in expected order', () {
       // Act
+      // Ensuring it returns exactly 15 valid Nigerian cities in the correct order.
       final result = repository.getCityOptions();
       
       // Assert
@@ -68,7 +69,8 @@ void main() {
 
   group('parameter validation', () {
     test('addCity should throw meaningful exception for null input', () async {
-      // Act & Assert
+      /// Act & Assert
+      /// Rigorous checks for null, empty, or whitespace inputs for addCity and removeCity methods, throwing meaningful exceptions.
       expect(
         () => repository.addCity(null),
         throwsA(
@@ -82,7 +84,8 @@ void main() {
     });
 
     test('addCity should throw meaningful exception for empty input', () async {
-      // Act & Assert
+      /// Act & Assert
+      /// Rigorous checks for null, empty, or whitespace inputs for addCity and removeCity methods, throwing meaningful exceptions.
       expect(
         () => repository.addCity(''),
         throwsA(
@@ -96,7 +99,8 @@ void main() {
     });
 
     test('addCity should throw meaningful exception for whitespace-only input', () async {
-      // Act & Assert
+      /// Act & Assert
+      /// Rigorous checks for null, empty, or whitespace inputs for addCity and removeCity methods, throwing meaningful exceptions.
       expect(
         () => repository.addCity(''),
         throwsA(
@@ -110,7 +114,8 @@ void main() {
     });
 
     test('removeCity should throw meaningful exception for null input', () async {
-      // Act & Assert
+      /// Act & Assert
+      /// Rigorous checks for null, empty, or whitespace inputs for addCity and removeCity methods, throwing meaningful exceptions.
       expect(
         () => repository.removeCity(null),
         throwsA(
@@ -124,7 +129,8 @@ void main() {
     });
 
     test('removeCity should throw meaningful exception for empty input', () async {
-      // Act & Assert
+      /// Act & Assert
+      /// Rigorous checks for null, empty, or whitespace inputs for addCity and removeCity methods, throwing meaningful exceptions.
       expect(
         () => repository.removeCity(''),
         throwsA(
@@ -140,7 +146,8 @@ void main() {
 
   group('CityWeather model validation', () {
     test('should create CityWeather with valid data', () {
-      // Act
+      /// Act
+      /// Verifying that the data model correctly handles and formats temperature, wind speed, humidity, and precipitation values
       final weather = CityWeather(
         cityName: 'Test City',
         temperature: '25.0°C',
